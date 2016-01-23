@@ -8,7 +8,8 @@ var gameOptions = {
 
 var gameStats = {
   score: 0,
-  bestScore:0
+  bestScore:0,
+  collisions: 0
 };
 
 var axes = {
@@ -21,7 +22,7 @@ var gameBoard = d3.select('.board').append('svg:svg')
                     .attr('height', gameOptions.height);
 
 var updateScore = function(){ 
-  d3.select('.current')
+  d3.select('.current').select('span')
   .text(gameStats.score.toString());
 };
 
@@ -29,7 +30,11 @@ var updateBestScore = function() {
   if(gameStats.score > gameStats.bestScore) {
     gameStats.bestScore = gameStats.score;
   }
-  d3.select('.highscore').text(gameStats.bestScore.toString());
+  d3.select('.highscore').select('span').text(gameStats.bestScore.toString());
+};
+
+var updateCollision = function() {
+  d3.select('.collisions').select('span').text(gameStats.collisions.toString());
 };
 
 var Player = function(gameOptions) {
@@ -39,6 +44,7 @@ var Player = function(gameOptions) {
   this.path = 'm-7.5,1.62413c0,-5.04095 4.08318,-9.12413 9.12414,-9.12413c5.04096,0 9.70345,5.53145 11.87586,9.12413c-2.02759,2.72372 -6.8349,9.12415 -11.87586,9.12415c-5.04096,0 -9.12414,-4.08318 -9.12414,-9.12415z';
   this.x = gameOptions.width/2;
   this.y = gameOptions.height/2;
+  this.r = 5;
   this.angle = 0;
   this.fill = '#ff6600';
   
@@ -109,7 +115,8 @@ Player.prototype.moveAbsolute = function(x, y) {
 Player.prototype.moveRelative = function(dx, dy) {
   this.transform( { x: this.getX() + dx,
                     y: this.getY() + dy,
-                angle: 360 * (Math.atan2(dy/dx)/(Math.PI*2))});
+                angle: 360 * (Math.atan2(dy/dx)/(Math.PI*2))
+                  } );
 };
 
 
@@ -132,7 +139,7 @@ players.push( new Player(gameOptions).render(gameBoard));
 var createEnemies = function(){
     return _.range(0, gameOptions.nEnemies).map(
       function(i){
-        return {id: i, x:Math.random()*100, y: Math.random()*100};
+        return {id: i, x: Math.random()*100, y: Math.random()*100};
       });
 };
 
@@ -150,12 +157,15 @@ var render = function(enemy_data){
 
   var checkCollision = function(enemy, collidedCallback) {
     _.each(players, function(player) {
+      // console.log(player.r);
       var radiusSum = parseFloat(enemy.attr('r')) + player.r;
       var xDiff = parseFloat(enemy.attr('cx')) - player.x;
       var yDiff = parseFloat(enemy.attr('cy')) - player.y;
 
       var separation = Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
+      // console.log('Separation: '+ separation + ' radiusSum: ' + radiusSum);
       if(separation < radiusSum){
+        // console.log('collided')
         collidedCallback(player, enemy);
       }
     });
@@ -165,10 +175,13 @@ var render = function(enemy_data){
     updateBestScore();
     gameStats.score = 0;
     updateScore();
+    gameStats.collisions++;
+    updateCollision();
   };
 
 
   var tweenWithCollisionDetection = function(endData) {
+
     var enemy = d3.select(this);
     var startPos = { x: parseFloat(enemy.attr('cx')),
                      y: parseFloat(enemy.attr('cy'))};
@@ -176,19 +189,19 @@ var render = function(enemy_data){
                   y: axes.y(endData.y)};
     return function(t) {
       checkCollision(enemy, onCollision);
-      var enemyNexPos = {x: startPos.x + (endPos.x - startPos.x)*t,
+      var enemyNextPos = {x: startPos.x + (endPos.x - startPos.x)*t,
                          y: startPos.y + (endPos.y - startPos.y)*t};
-      enemy.attr('cx', enemyNexPos.x).attr('cy', enemyNexPos.y);
+      enemy.attr('cx', enemyNextPos.x).attr('cy', enemyNextPos.y);
     };
   };
 
-enemies
-  .transition()
-    .duration(500)
-    .attr('r', 10)
-  .transition()
-    .duration(2000)
-    .tween('custom', tweenWithCollisionDetection);
+  enemies
+    .transition()
+      .duration(500)
+      .attr('r', 10)
+    .transition()
+      .duration(2000)
+      .tween('custom', tweenWithCollisionDetection);
 
 };
 
@@ -210,9 +223,6 @@ var play = function() {
   gameTurn();
   setInterval(gameTurn, 2000);
   setInterval(increaseScore, 50);
-
-
-
 };
 
 
