@@ -92,6 +92,7 @@ Player.prototype.setY = function(value){
 };
 
 Player.prototype.transform = function(opts){
+  // console.log(opts.angle);
   this.angle = opts.angle || this.angle;
   if(opts.x){
     this.setX(opts.x);
@@ -115,7 +116,7 @@ Player.prototype.moveAbsolute = function(x, y) {
 Player.prototype.moveRelative = function(dx, dy) {
   this.transform( { x: this.getX() + dx,
                     y: this.getY() + dy,
-                angle: 360 * (Math.atan2(dy/dx)/(Math.PI*2))
+                angle: (360*(Math.atan2(dy, dx)/(Math.PI*2)))
                   } );
 };
 
